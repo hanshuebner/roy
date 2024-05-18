@@ -1,8 +1,12 @@
+require('dotenv').config()
+
 const Expect = require('node-expect')
 const axios = require('axios')
 
 const socket = new require('net').Socket({ type: 'tcp4' })
 const parser = new Expect()
+
+parser.debug = 0
 
 const handleAuditServerMessage = (date, time, message) => {
   if (message.match(/Auditable event:.*nteractive login/)) {
@@ -17,13 +21,24 @@ const handleAuditServerMessage = (date, time, message) => {
 const handleDecnetMessage = (date, time, message) => {
 }
 
-const handleUserMessage = (date, time, user, type, message) => {
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+const createResponse = async (user, message) => {
+  await sleep(1500)
+  return "I'm still too dumb to really respond, sadly"
+}
+
+const handleUserMessage = async (date, time, user, type, message) => {
   const [terminal, userMessage] = message.split(/, /, 2)
   console.log('terminal', terminal, 'userMessage', userMessage)
-  setTimeout(
-    () => socket.write(`reply/terminal=${terminal} "I'm still too dumb to really respond"\r`),
-    1500
-  )
+  const response = await createResponse(user, userMessage)
+  socket.write(`reply/bell/terminal=${terminal} "${response}"\r`)
+}
+
+const handleSendMessage = async (match, user, terminal, message) => {
+  console.log('user', user, 'terminal', terminal, 'messsage', message)
+  const response = await createResponse(user, message)
+  socket.write(`send ${user} "${response}\r`)
 }
 
 const handleOpcomMessage = (match, date, time, type, user, host, message) => {
@@ -50,6 +65,9 @@ const handleOpcomMessages = () => {
       data.replaceAll(
         /%%%%%%%%%%%  OPCOM  (.*) (.*)  %%%%%%%%%%%\n(Message|Request \d+,) from user (.*) on (.*)\n((.+\n)+)/g,
         handleOpcomMessage)
+      data.replaceAll(
+        /^(\S+)\((\S+)\)[- \x07]+(.*)\n/gm,
+        handleSendMessage)
       console.log(`>>>${data}<<<`)
       data = ''
     }
@@ -57,16 +75,12 @@ const handleOpcomMessages = () => {
 }
 
 parser
-  .conversation(/User Access Verification/)
+  .conversation(/./)
   .sync()
-  .expect(/Password:/)
-  .send('cisco\r')
-  .expect(/cisco.netmbx.org>/)
-  .send('lat eugene\r')
-  .expect(/Username:/)
-  .send('operator\r')
-  .expect(/Password:/)
-  .send('dke3nrkjcn\r')
+  .expect(/Username: /)
+  .send(`${process.env.ROY_VAX_USERNAME}\r`)
+  .expect(/Password: /)
+  .send(`${process.env.ROY_VAX_PASSWORD}\r`)
   .expect(/Last interactive login/)
   .handler(handleOpcomMessages)
   .end()
@@ -76,4 +90,4 @@ process.on('unhandledRejection', error => {
   throw error
 })
 
-socket.connect(23, 'cisco.netmbx.org')
+socket.connect(process.env.ROY_VAX_TELNET_PORT, process.env.ROY_VAX_TELNET_HOST)

@@ -4,12 +4,16 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/roy.js",
+    "run": "node src/roy.js"
   },
   "private": true,
   "dependencies": {
     "axios": "^1.6.8",
     "dotenv": "^16.4.5",
     "node-expect": "^0.1.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.0"
   }
 }
