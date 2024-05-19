@@ -59,7 +59,7 @@ const createResponse = async (user, content, lineLength) => {
   const messagesPage = await openai.beta.threads.messages.list(
     run.thread_id
   )
-  const response = messagesPage.data[0].content[0].text.value.replace(/[\u{0080}-\u{FFFF}]/gu,"")
+  const response = messagesPage.data[0].content[0].text.value.replace(/[\u{0080}-\u{FFFFF}]/gu,"")
   return wrapText(response, lineLength)
     .split(/\n/)
     .filter(s => s.length > 0)
