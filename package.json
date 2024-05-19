@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "nodemon src/roy.js",
     "run": "node src/roy.js",
-    "create-assistant": "node src/createRoy.js"
+    "create-assistant": "node src/createRoy.js",
+    "update-assistant": "node src/updateRoy.js"
   },
   "private": true,
   "dependencies": {

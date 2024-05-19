@@ -54,12 +54,13 @@ const createResponse = async (user, content, lineLength) => {
   )
   if (run.status !== "completed") {
     console.log(`run status ${run.status}`)
-    return "I'm sorry, but I'm unable of responding at this point.  Try later or call x2342."
+    return "I'm sorry, but I'm unable to respond at this point.  Try later or call x2342."
   }
   const messagesPage = await openai.beta.threads.messages.list(
     run.thread_id
   )
-  return wrapText(messagesPage.data[0].content[0].text.value, lineLength)
+  const response = messagesPage.data[0].content[0].text.value.replace(/[\u{0080}-\u{FFFF}]/gu,"")
+  return wrapText(response, lineLength)
     .split(/\n/)
     .filter(s => s.length > 0)
 }
