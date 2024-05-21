@@ -1,9 +1,12 @@
 require('dotenv').config()
 
+const fs = require('node:fs')
 const Expect = require('node-expect')
 const OpenAI = require('openai')
 const net = require('net')
 const wrapText = require('wrap-text')
+
+const USER_THREADS_FILE = "user-threads.json"
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -32,34 +35,51 @@ const handleAuditServerMessage = async (date, time, message) => {
 const handleDecnetMessage = (_date, _time, _message) => {
 }
 
-const findUserThread = async (_user) => {
-  const thread = await openai.beta.threads.create();
-  return thread
+const readUserThreadIds = () => {
+  if (fs.existsSync(USER_THREADS_FILE)) {
+    return JSON.parse(fs.readFileSync(USER_THREADS_FILE, { encoding: 'utf-8' }))
+  } else {
+    return {}
+  }
+}
+
+const writeUserThreadIds = (threads) =>
+  fs.writeFileSync(USER_THREADS_FILE, JSON.stringify(threads), { encoding: 'utf-8' })
+
+const USER_THREADS = readUserThreadIds()
+
+const findUserThreadId = async (user) => {
+  if (!USER_THREADS[user]) {
+    const thread = await openai.beta.threads.create()
+    USER_THREADS[user] = thread.id
+    writeUserThreadIds(USER_THREADS)
+  }
+  return USER_THREADS[user]
 }
 
 const createResponse = async (user, content, lineLength) => {
-  const thread = await findUserThread(user)
+  const threadId = await findUserThreadId(user)
   await openai.beta.threads.messages.create(
-    thread.id,
+    threadId,
     {
-      role: "user",
+      role: 'user',
       content
     }
   )
   const run = await openai.beta.threads.runs.createAndPoll(
-    thread.id,
+    threadId,
     {
       assistant_id: process.env.OPENAI_ASSISTANT_ID
     }
   )
-  if (run.status !== "completed") {
+  if (run.status !== 'completed') {
     console.log(`run status ${run.status}`)
-    return "I'm sorry, but I'm unable to respond at this point.  Try later or call x2342."
+    return 'I\'m sorry, but I\'m unable to respond at this point.  Try later or call x2342.'
   }
   const messagesPage = await openai.beta.threads.messages.list(
     run.thread_id
   )
-  const response = messagesPage.data[0].content[0].text.value.replace(/[\u{0080}-\u{FFFFF}]/gu,"")
+  const response = messagesPage.data[0].content[0].text.value.replace(/[\u{0080}-\u{FFFFF}]/gu, '')
   return wrapText(response, lineLength)
     .split(/\n/)
     .filter(s => s.length > 0)
