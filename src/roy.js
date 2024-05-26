@@ -129,6 +129,7 @@ const handleOpcomMessages = () => {
       data = ''
     }
   })
+  setInterval(() => socket.write('\r'), 30000)
 }
 
 parser
